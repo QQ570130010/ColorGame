@@ -1,0 +1,1555 @@
+﻿<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Color Game</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: white;
+      padding: 15px;
+      margin: 0;
+      overflow-x: hidden;
+    }
+      .container {
+          display: flex;
+          gap: 15px;
+          max-width: 1200px;
+          margin: 0 auto;
+      }
+      .main-panel {
+          flex: 1;
+          min-width: 400px;
+      }
+
+      .sidebar {
+          width: 320px;
+          flex-shrink: 0;
+      }
+    .ball-gray { background: gray; }
+    .ball-green { background: green; }
+    .ball-blue { background: #2196F3; }
+    .ball-purple { background: purple; }
+    .ball-yellow { background: gold; color: black; }
+    .ball-orange { background: orange; color: black; }
+
+    .main-panel {
+      flex: 1;
+      max-width: 600px;
+      /*margin-left:300px;*/
+      height:100%;
+    }
+    .sidebar {
+      width: 320px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      padding: 15px;
+      backdrop-filter: blur(5px);
+      border: 1px solid #555;
+    }
+    h1 {
+      text-align: center;
+      font-size: 28px;
+      margin: 10px 0;
+      color: #ffcc00;
+      text-shadow: 0 0 10px rgba(255,204,0,0.7);
+    }
+
+    .score-board {
+      display: flex;
+      justify-content: space-between;
+      margin: 15px 0;
+      font-size: 20px;
+      font-weight: bold;
+      background: rgba(0,0,0,0.3);
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    .chip-btn {
+      background: #3a3a5a;
+      color: white;
+      border: 2px solid transparent;
+      padding: 6px 12px;
+      margin: 0 4px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .chip-btn.active {
+      border-color: #ffeb3b;
+      background: #4a4a6a;
+      box-shadow: 0 0 8px rgba(255,235,59,0.6);
+    }
+
+    .color-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 8px;
+      margin: 15px 0;
+      height: 120px;
+    }
+    .color-btn {
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      text-shadow: 0 0 3px black;
+      transition: transform 0.2s, box-shadow 0.2s;
+      aspect-ratio: 2 / 1;
+      position: relative;
+    }
+    .color-btn:hover { transform: scale(1.03); }
+    .color-btn.bet { 
+      /*transform: scale(1.05); 
+      box-shadow: 0 0 10px yellow; 
+      border-color: gold;*/
+    }
+    .color-btn[data-color="gray"] { background: gray; }
+    .color-btn[data-color="green"] { background: green; }
+    .color-btn[data-color="blue"] { background: #2196F3; }
+    .color-btn[data-color="purple"] { background: purple; }
+    .color-btn[data-color="yellow"] { background: gold; color: black; }
+    .color-btn[data-color="orange"] { background: orange; color: black; }
+
+    /* ✅ 新增：开奖倍数显示样式 */
+    .multiplier-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    .multiplier-hit {
+      color: #ff5252; /* 红色 */
+    }
+    .multiplier-miss {
+      color: #aaa; /* 灰色 */
+    }
+
+    .gacha-machine {
+      height: 160px;
+      background: linear-gradient(to bottom, #2c1a4d, #1a0f2e);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      border: 3px solid #6a4c93;
+      box-shadow: 0 0 15px rgba(106, 76, 147, 0.6);
+      margin: 15px 0;
+    }
+    .machine-label {
+      position: absolute;
+      top: 8px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 14px;
+      color: #ddd;
+      font-weight: bold;
+    }
+    .ball-inside {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      opacity: 0.95;
+    }
+
+    .output-tray {
+      height: 50px;
+      background: #111;
+      border: 2px solid #555;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+    .tray-label {
+      position: absolute;
+      top: -20px;
+      left: 10px;
+      font-size: 13px;
+      color: #888;
+    }
+    .ball-output {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid white;
+      animation: popIn 0.4s ease-out;
+    }
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      70% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+      .action-group {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 90px !important; /* 👈 关键：固定 90px 上边距 */
+      }
+    .action-btn {
+      background: linear-gradient(to right, #ff5722, #ff9800);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      font-size: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      min-width: 90px;
+    }
+    .clear-btn, .stop-btn {
+      background: linear-gradient(to right, #6c757d, #909da8) !important;
+    }
+    .auto-btn {
+      background: linear-gradient(to right, #4caf50, #8bc34a) !important;
+    }
+    .action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .simulation-table h3 {
+      margin-top: 0;
+      color: #4fc3f7;
+      text-align: center;
+      font-size: 18px;
+    }
+    .table-header, .table-row, .table-total {
+      display: grid;
+      grid-template-columns: 120px 80px 70px 90px;
+      padding: 6px 0;
+      font-size: 12px;
+    }
+    .table-header {
+      font-weight: bold;
+      border-bottom: 1px solid #444;
+    }
+    .table-row {
+      border-bottom: 1px solid #333;
+      align-items: center;
+    }
+    .balls-cell {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+    }
+    .small-ball {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid #aaa;
+    }
+    .ball-unknown {
+      background: transparent !important;
+      border: 1px dashed #aaa !important;
+    }
+    .summary-footer {
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px solid #555;
+      font-size: 14px;
+    }
+    .expectation {
+      color: #4caf50;
+      font-weight: bold;
+    }
+
+    .win-cell {
+      font-weight: bold;
+    }
+    .win-high {
+      color: #4caf50;
+    }
+    .win-low {
+      color: #f44336;
+    }
+
+    .color-stats-table {
+      margin-top: 25px;
+    }
+    .stats-title {
+      text-align: center;
+      color: #bb86fc;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    .stats-header, .stats-row {
+      display: grid;
+      grid-template-columns: 70px 80px 100px;
+      padding: 6px 0;
+      font-size: 13px;
+    }
+    .stats-header {
+      font-weight: bold;
+      border-bottom: 1px solid #444;
+    }
+    .stats-row {
+      border-bottom: 1px solid #333;
+      align-items: center;
+    }
+    .color-cell {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .color-name {
+      font-size: 12px;
+    }
+      /* 让 credit 数字变化时有淡入效果 */
+      #credit-display {
+          transition: opacity 0.2s;
+      }
+
+      /* 色块相对定位（让右上角元素能 absolute 定位） */
+      .color-btn {
+          position: relative;
+      }
+
+      /* 押注金额样式（居中显示） */
+      .bet-amount {
+          display: block;
+          text-align: center;
+          font-size: 20px;
+          color: black;
+          margin-top: 4px;
+          text-shadow: none; /* 明确关闭阴影 */
+          -webkit-font-smoothing: antialiased; /* 可选：让字体更清晰 */
+      }
+
+      /* 倍数提示：固定在右上角 */
+      .multiplier-hint {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          font-size: 30px;
+          font-weight:700;
+          color: red;
+          text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+      }
+
+      /* 未中奖色块：低亮 + 灰度 */
+      .color-btn.dimmed {
+          opacity: 0.4;
+      }
+      .score-board {
+          display: flex;
+          justify-content: space-between;
+          gap: 16px;
+          margin: 12px 0;
+          font-family: 'Courier New', monospace; /* 数字对齐更好 */
+      }
+
+      .display-panel {
+          flex: 1;
+          background: #0a0a14;
+          border: 2px solid #2c2c44;
+          border-radius: 8px;
+          padding: 10px;
+          text-align: center;
+          box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.7), 0 0 4px rgba(0, 100, 255, 0.3);
+          min-width: 120px;
+      }
+
+          .display-panel .label {
+              font-size: 12px;
+              color: #aaa;
+              letter-spacing: 1px;
+              text-transform: uppercase;
+              margin-bottom: 4px;
+          }
+
+          .display-panel .value {
+              font-size: 18px;
+              font-weight: bold;
+              color: #4dff4d; /* 荧光绿，经典街机色 */
+              text-shadow: 0 0 6px rgba(77, 255, 77, 0.6);
+              line-height: 1.2;
+          }
+
+      /* 可选：WIN 和 CREDIT 用不同高亮色 */
+      .win-panel .value {
+          color: #ffcc00; /* 金色 */
+          text-shadow: 0 0 6px rgba(255, 204, 0, 0.6);
+      }
+
+      .credit-panel .value {
+          color: #4dff4d; /* 荧光绿 */
+          text-shadow: 0 0 6px rgba(77, 255, 77, 0.6);
+      }
+
+      .gacha-machine {
+          position: relative;
+          width: 200px; /* 或者任何你希望的尺寸 */
+          height: 200px;
+          background: #0f0f23;
+          border-radius: 50%; /* 将容器变成圆形 */
+          overflow: hidden;
+          margin: 16px auto;
+          border: 3px solid #444;
+          box-shadow: inset 0 0 12px rgba(0,0,0,0.8);
+      }
+
+      .ball-inside {
+          position: absolute;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          transform: translate(-50%, -50%); /* 以中心定位 */
+      }
+      .credit-panel {
+          position: relative;
+      }
+
+      .add-credit-btn {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          width: 20px;
+          height: 20px;
+          font-size: 14px;
+          line-height: 1;
+          background: #4caf50;
+          color: white;
+          border: none;
+          border-radius: 50%;
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
+      }
+
+          .add-credit-btn:hover {
+              background: #45a049;
+          }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+      <div class="sidebar">
+          <div class="simulation-table" v-if="martingaleResult && !martingaleResult.error">
+              <h3>倍投策略模拟结果</h3>
+
+              <!-- 表头：5列，压缩宽度 -->
+              <div class="table-header" style="grid-template-columns: 0.6fr 1fr 1fr 1fr 1.1fr;">
+                  <div>周期</div>
+                  <div>总押注</div>
+                  <div>中奖</div>
+                  <div>净利润</div>
+                  <div>结束余额</div>
+              </div>
+
+              <!-- 成功周期 -->
+              <div v-for="(cycle, idx) in martingaleResult.completedCycles"
+                   :key="idx"
+                   class="table-row"
+                   style="grid-template-columns: 0.6fr 1fr 1fr 1fr 1.1fr;"
+                   >
+                  <div>{{ idx + 1 }}</div>
+                  <div>{{ formatNumber(cycle.totalBet) }}</div>
+                  <div>{{ formatNumber(cycle.totalWin) }}</div>
+                  <div class="win-cell"
+                       :class="cycle.netProfit >= 0 ? 'win-high' : 'win-low'">
+                      {{ cycle.netProfit >= 0 ? '+' : '' }}{{ formatNumber(cycle.netProfit) }}
+                  </div>
+                  <div>{{ formatNumber(cycle.creditAfter) }}</div>
+              </div>
+
+              <!-- 未完成周期（失败链汇总） -->
+              <div v-if="martingaleResult.incompleteCycle"
+                   class="table-row"
+                   style="grid-template-columns: 0.6fr 1fr 1fr 1fr 1.1fr;">
+                  <div>×</div>
+                  <div>{{ formatNumber(martingaleResult.incompleteCycle.totalBet) }}</div>
+                  <div>{{ formatNumber(martingaleResult.incompleteCycle.totalWin) }}</div>
+                  <div class="win-cell win-low">
+                      {{ formatNumber(martingaleResult.incompleteCycle.netProfit) }}
+                  </div>
+                  <div>{{ formatNumber(martingaleResult.incompleteCycle.creditAfter) }}</div>
+              </div>
+              <!-- 可展开的详细连败记录 -->
+              <details v-if="martingaleResult.failedChain && martingaleResult.failedChain.length > 0"
+                       style="margin-top: 4px; border: 1px solid #eee; border-radius: 4px; overflow: hidden;">
+                  <summary style="
+      padding: 6px 12px;
+      background: #f8f9fa;
+      cursor: pointer;
+      font-size: 13px;
+      color: #e74c3c;
+      list-style: none;
+    ">
+                      ▶ 展开最后 {{ martingaleResult.failedChain.length }} 连败详情
+                  </summary>
+
+                  <!-- 详情表头 -->
+                  <div class="table-header" style="grid-template-columns: 0.8fr 1.2fr 1.2fr 1.5fr; padding: 4px 8px;">
+                      <div>序号</div>
+                      <div>押注</div>
+                      <div>中奖</div>
+                      <div>余额</div>
+                  </div>
+
+                  <!-- 详情行 -->
+                  <div v-for="(round, i) in martingaleResult.failedChain"
+                       :key="i"
+                       class="table-row"
+                       style="grid-template-columns: 0.8fr 1.2fr 1.2fr 1.5fr;padding: 4px 8px; font-size: 13px;">
+                      <div>{{ round.round }}</div>
+                      <div>{{ formatNumber(round.bet) }}</div>
+                      <div class="win-cell win-low">{{ formatNumber(round.win) }}</div>
+                      <div>{{ formatNumber(round.creditAfter) }}</div>
+                  </div>
+              </details>
+
+              <!-- 汇总行 -->
+              <div class="table-total"
+                   style="
+      font-weight: bold;
+      border-top: 1px solid #666;
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 0.6fr 1fr 1fr 1fr 1.1fr;
+    ">
+                  <div>合计</div>
+                  <div>{{ formatNumber(martingaleResult.summary.totalBetAmount) }}</div>
+                  <div>{{ formatNumber(martingaleResult.summary.totalWin) }}</div>
+                  <div :class="martingaleResult.summary.netProfit >= 0 ? 'win-high' : 'win-low'">
+                      {{ martingaleResult.summary.netProfit >= 0 ? '+' : '' }}{{ formatNumber(martingaleResult.summary.netProfit) }}
+                  </div>
+                  <div>{{ formatNumber(martingaleResult.finalCredit) }}</div>
+              </div>
+
+              <!-- 底部摘要 -->
+              <div class="summary-footer" style="margin-top: 12px; display: flex; justify-content: space-between;">
+                  <p>成功周期: {{ martingaleResult.completedCycles.length }}</p>
+                  <p>资金峰值: {{ formatNumber(martingaleResult.maxCredit) }}</p>
+                  <p>最终余额: {{ formatNumber(martingaleResult.finalCredit) }}</p>
+                  <p>孤注一掷次数: {{martingaleResult.allInCount}}</p>
+              </div>
+          </div>
+
+          <div v-else-if="martingaleResult && martingaleResult.error" class="simulation-table">
+              <div style="color: #e74c3c; padding: 12px;">⚠️ {{ martingaleResult.error }}</div>
+          </div>
+
+      </div>
+    <!-- 主面板 -->
+    <div class="main-panel">
+      <h1>Color Game</h1>
+      <div class="gacha-machine">
+          <div v-for="(ball, i) in machineBalls"
+               :key="i"
+               class="ball-inside"
+               :class="'ball-' + ball.color"
+               :style="{ left: ball.x + 'px', top: ball.y + 'px' }"></div>
+      </div>
+      <div class="output-tray">
+        <div class="tray-label">开奖结果</div>
+        <div v-for="(ball, i) in outputBalls" :key="i" 
+             class="ball-output" :class="'ball-' + ball"></div>
+      </div>
+
+      <div v-if="0" class="score-board">
+        <div>WIN-BOUNS: {{ formatNumber(win) }}</div>
+        <div id="credit-display">CREDIT: {{ credit}}</div>
+      </div>
+      <div class="score-board">
+          <div class="display-panel win-panel">
+              <div class="label">WIN-BONUS</div>
+              <div class="value">{{ win }}</div>
+          </div>
+          <div class="display-panel credit-panel">
+              <div class="label">CREDIT</div>
+              <!-- ✅ 新增：+ 按钮 -->
+              <button class="add-credit-btn" @click.stop="addCredit(1000000)">+</button>
+              <div class="value">{{ credit }}</div>
+          </div>
+      </div>
+      <div class="bet-controls">
+          <button class="chip-btn" :class="{ active: selectedChip === 1 }" @click="selectChip(1)">1</button>
+          <button class="chip-btn" :class="{ active: selectedChip === 10 }" @click="selectChip(10)">10</button>
+          <button class="chip-btn" :class="{ active: selectedChip === 100 }" @click="selectChip(100)">100</button>
+          <button class="chip-btn" :class="{ active: selectedChip === 1000 }" @click="selectChip(1000)">1K</button>
+          <button class="chip-btn" :class="{ active: selectedChip === 10000 }" @click="selectChip(10000)">10K</button>
+          <button class="chip-btn" :class="{ active: selectedChip === 100000 }" @click="selectChip(100000)">100K</button>
+          <button class="chip-btn" :class="{ active: selectedChip === 1000000 }" @click="selectChip(1000000)">1M</button>
+      </div>
+
+      
+      <div class="color-buttons">
+          <div v-for="color in colors"
+               :key="color"
+               class="color-btn"
+               :class="{bet: bets[color] > 0,dimmed: hasResult && !isWinningColor(color)}"
+              v-bind:data-color="color"
+              v-on:click="placeBet(color)"
+              v-bind:disabled="credit <= 0 || isSpinning || hasResult"
+              >
+              <!-- 💰 押注金额：只要 >0 就一直显示（包括开奖后） -->
+              <span v-if="bets[color] > 0" class="bet-amount">
+                  {{ formatNumber(bets[color]) }}
+              </span>
+
+              <!-- 🎯 倍数：仅在开奖后（hasResult）显示在右上角 -->
+              <div v-if="hasResult" class="multiplier-hint">
+                  {{ multiplierText(color) }}
+              </div>
+          </div>
+      </div>
+      <div class="action-group">
+          <button class="action-btn" @click="handleAction" :disabled="isDisabled">
+              {{ hasResult ? '得 分' : (Object.values(lastBets).some(v => v > 0) ? '启 动' : '启 动') }}
+          </button>
+        <button 
+          v-if="totalBet > 0 && !isSpinning && !hasResult" 
+          class="action-btn clear-btn" 
+          @click="clearBets"
+        >
+          清 空
+        </button>
+        <button 
+          v-if="!isAutoMode" 
+          class="action-btn auto-btn" 
+          @click="startAutoMode"
+          :disabled="isDisabled || totalBet === 0"
+        >
+          自 动
+        </button>
+        <button 
+          v-else 
+          class="action-btn stop-btn" 
+          @click="stopAutoMode"
+        >
+          停 止
+        </button>
+      </div>
+
+      <!-- 模拟运行控制区 -->
+      <div class="simulation-control" style="margin-top: 20px; text-align: center;">
+          <div style="display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 10px;">
+              <input type="number"
+                     v-model.number="simulateCount"
+                     min="1"
+                     max="100000"
+                     placeholder="次数"
+                     style="width: 100px; padding: 6px; border-radius: 4px; border: 1px solid #666;" />
+              <button class="action-btn auto-btn"
+                      @click="runSimulation"
+                      :disabled="isDisabled || simulateCount <= 0"
+                      style="font-size: 14px; padding: 6px 12px;">
+                  模拟运行
+              </button>
+              <button @click="runMartingaleSimulation" class="action-btn auto-btn" :disabled="isDisabled || simulateCount <= 0" style="font-size: 14px; padding: 6px 12px;">模拟倍投策略</button>
+          </div>
+          <!-- 进度提示 -->
+          <div v-if="simulateMessage" style="margin-top: 8px; font-size: 13px; color: #bbdefb;">
+              {{ simulateMessage }}
+          </div>
+          <!-- 仅颜色统计 -->
+          <div v-else-if="simulationResult && simulationResult.status === 'color-only'" style="margin-top: 8px; font-size: 13px; color: #bbdefb;">
+              ✅ 模拟完成 {{ simulationResult.runs }} 次！仅统计颜色
+          </div>
+          <!-- ✅ 横向表格结果 -->
+          <div v-else-if="simulationResult && simulationResult.status" style="margin-top: 8px; font-size: 13px; color: #bbdefb;">
+              <!-- 标题 -->
+              <div style="font-weight: bold; margin-bottom: 4px;">
+                  {{
+      simulationResult.status === 'completed'
+        ? `✅ 模拟完成 ${simulationResult.runs} 次！`
+        : `⚠️ 分数不足，提前终止（${simulationResult.runs} 次）`
+                  }}
+              </div>
+              <!-- 横向表格：一行三列 -->
+              <div style="display: flex; gap: 12px; justify-content: flex-start; flex-wrap: wrap;">
+                  <div style="background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 4px; min-width: 100px;">
+                      <div style="font-size: 11px; opacity: 0.7;">总押注</div>
+                      <div>{{ formatNumber(simulationResult.totalBetAmount) }}</div>
+                  </div>
+                  <div style="background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 4px; min-width: 100px;">
+                      <div style="font-size: 11px; opacity: 0.7;">中奖分数</div>
+                      <div>{{ formatNumber(simulationResult.totalWin) }}</div>
+                  </div>
+                  <div style="background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 4px; min-width: 100px;">
+                      <div style="font-size: 11px; opacity: 0.7;">净利润</div>
+                      <div :style="{ color: simulationResult.netProfit >= 0 ? '#4caf50' : '#f44336' }">
+                          <span v-if="simulationResult.netProfit >= 0">+</span>
+                          {{ formatNumber(simulationResult.netProfit) }}
+                      </div>
+                  </div>
+                  <div style="background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 4px; min-width: 100px;">
+                      <div style="font-size: 11px; opacity: 0.7;">返奖率</div>
+                      <div :style="{ color: simulationResult.netProfit >= 0 ? '#4caf50' : '#f44336' }">
+                          <span v-if="simulationResult.netProfit >= 0">+</span>
+                          {{ (simulationResult.totalWin / simulationResult.totalBetAmount * 100).toFixed(2) + "%" }}
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+
+      </div>
+    </div>
+
+    <!-- 右侧汇总表（始终显示统计） -->
+    <div class="sidebar">
+        <div class="score-board">
+            <div class="display-panel win-panel">
+                <div class="label">总中奖分数</div>
+                <div class="value">{{ formatNumber(totalWinScore) }}</div>
+            </div>
+            <div class="display-panel credit-panel">
+                <div class="label">总押分数</div>
+                <div class="value">{{ formatNumber(totalBetScore) }}</div>
+            </div>
+        </div>
+      <div class="simulation-table" v-if="showSimulation">
+        <h3>开奖可能汇总</h3>
+        <div class="table-header">
+          <div>开奖结果</div>
+          <div>组合</div>
+          <div>概率</div>
+          <div>奖金</div>
+        </div>
+        <div v-for="(item, idx) in summaryResults" :key="idx" 
+             class="table-row" :class="{ 'no-win-row': item.isNoWin }">
+          <div class="balls-cell">
+            <span v-for="(color, j) in item.displayBalls" :key="j" 
+                  class="small-ball" :class="color === 'unknown' ? 'ball-unknown' : 'ball-' + color"></span>
+          </div>
+          <div>{{ item.count }}</div>
+          <div>{{ (item.prob * 100).toFixed(3) }}%</div>
+          <div class="win-cell" :class="item.win >= totalBet ? 'win-high' : 'win-low'">
+            {{ item.isNoWin ? '0' : formatNumber(item.win) }}
+          </div>
+        </div>
+
+        <div class="table-total" style="font-weight: bold; border-top: 1px solid #666; margin-top: 8px;">
+          <div>合计</div>
+          <div>{{ totalCount }}</div>
+          <div>{{ totalProbPercent.toFixed(3) }}%</div>
+          <div></div>
+        </div>
+
+        <div class="summary-footer">
+          <div>总押分: {{ formatNumber(totalBet) }}</div>
+          <div>期望分: <span class="expectation">{{ formatExpectation(expectedWin) }}</span></div>
+        </div>
+      </div>
+
+      <!-- ✅ 始终显示：各色球开奖统计 -->
+      <div class="color-stats-table">
+        <div class="stats-title">各色球开奖统计</div>
+        <div class="stats-header">
+          <div>颜色</div>
+          <div>次数</div>
+          <div>占比</div>
+        </div>
+        <div v-for="stat in sortedColorStats" :key="stat.color" class="stats-row">
+          <div class="color-cell">
+            <span class="small-ball" :class="'ball-' + stat.color"></span>
+            <span v-if="0" class="color-name">{{ stat.name }}</span>
+          </div>
+          <div>{{ stat.count }}</div>
+          <div>{{ stat.percent.toFixed(2) }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function generateAllCombinations(colors) {
+      const pool = [];
+      colors.forEach(color => {
+        for (let i = 0; i < 3; i++) pool.push(color);
+      });
+      const combinations = [];
+      const n = pool.length;
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 1; j < n; j++) {
+          for (let k = j + 1; k < n; k++) {
+            combinations.push([pool[i], pool[j], pool[k]]);
+          }
+        }
+      }
+      return combinations;
+    }
+
+    new Vue({
+      el: '#app',
+        data: {
+        martingaleResult: null, // 存放倍投模拟结果
+        credit: 1000000,
+        win: 0,
+        selectedChip: 1000,
+        colors: ['gray', 'green', 'blue', 'purple', 'yellow', 'orange'],
+        colorNames: {
+          gray: '灰',
+          green: '绿',
+          blue: '蓝',
+          purple: '紫',
+          yellow: '黄',
+          orange: '橙'
+        },
+        bets: {
+          gray: 0, green: 0, blue: 0, purple: 0, yellow: 0, orange: 0
+        },
+        lastBets: {},
+        resultBalls: [],
+        hasResult: false,
+        isSpinning: false,
+        allCombinations: [],
+        summaryResults: [],
+        showSimulation: false,
+        machineBalls: [],
+        outputBalls: [],
+        historyCount: {
+          gray: 0, green: 0, blue: 0, purple: 0, yellow: 0, orange: 0
+        },
+        isAutoMode: false,
+        autoTimeout: null,
+        simulateCount: 100000,
+        simulateMessage: '',
+        simulationResult: null, // 👈 新增：用于存结果
+        totalWinScore: 0,   // 🌟 新增：累计总中奖分数
+        totalBetScore: 0   // 🌟 新增：累计总押注分数
+      },
+      computed: {
+        isDisabled() {
+          return this.isSpinning || this.isAutoMode;
+        },
+        totalBet() {
+          return Object.values(this.bets).reduce((a, b) => a + b, 0);
+        },
+        expectedWin() {
+          if (this.totalBet === 0) return 0;
+          let totalExp = 0;
+          for (const combo of this.allCombinations) {
+            const count = {};
+            this.colors.forEach(c => count[c] = 0);
+            combo.forEach(c => count[c]++);
+            let win = 0;
+            for (const color of this.colors) {
+              if (this.bets[color] > 0) {
+                const n = count[color];
+                let mult = 0;
+                if (n === 1) mult = 2;
+                else if (n === 2) mult = 3;
+                else if (n === 3) mult = 10;
+                win += this.bets[color] * mult;
+              }
+            }
+            totalExp += win;
+          }
+          return totalExp / 816;
+        },
+        sortedColorStats() {
+          const total = Object.values(this.historyCount).reduce((a, b) => a + b, 0) || 1;
+          return this.colors.map(color => ({
+            color,
+            name: this.colorNames[color],
+            count: this.historyCount[color],
+            percent: (this.historyCount[color] / total) * 100
+          })).sort((a, b) => a.count - b.count);
+        },
+        totalCount() {
+          return this.summaryResults.reduce((sum, item) => sum + item.count, 0);
+        },
+        totalProbPercent() {
+          return this.summaryResults.reduce((sum, item) => sum + item.prob * 100, 0);
+        }
+      },
+        methods: {
+            updateGlobalTotals(betAmount, winAmount) {
+                this.totalBetScore += betAmount;
+                this.totalWinScore += winAmount;
+            },
+            addCredit(amount) {
+                this.credit = Number(this.credit) + amount;
+            },
+        selectChip(amount) {
+          if (this.credit <= 0 || this.isSpinning || this.hasResult || this.isAutoMode) return;
+          this.selectedChip = amount;
+        },
+          placeBet(color) {
+              this.simulateMessage = ''; // 👈 新增
+              this.lastBets = { red: 0, blue: 0, green: 0, yellow: 0, purple: 0, cyan: 0 };
+          if (this.hasResult || this.isSpinning || this.credit <= 0 || this.isAutoMode) return;
+          if (this.credit >= this.selectedChip) {
+            this.$set(this.bets, color, this.bets[color] + this.selectedChip);
+            this.credit -= this.selectedChip;
+            this.updateSummary();
+          }
+        },
+        clearBets() {
+          this.simulateMessage = ''; // 👈 新增
+          const refund = this.totalBet;
+          this.credit += refund;
+          this.bets = {
+            gray: 0, green: 0, blue: 0, purple: 0, yellow: 0, orange: 0
+          };
+          this.showSimulation = false;
+        },
+        updateSummary() {
+          const totalBet = this.totalBet;
+          if (totalBet === 0) {
+            this.summaryResults = [];
+            this.showSimulation = false;
+            return;
+          }
+
+          const map = new Map();
+          let noWinCount = 0;
+
+          for (const combo of this.allCombinations) {
+            const count = {};
+            this.colors.forEach(c => count[c] = 0);
+            combo.forEach(c => count[c]++);
+
+            let win = 0;
+            for (const color of this.colors) {
+              if (this.bets[color] > 0) {
+                const n = count[color];
+                let mult = 0;
+                if (n === 1) mult = 2;
+                else if (n === 2) mult = 3;
+                else if (n === 3) mult = 10;
+                win += this.bets[color] * mult;
+              }
+            }
+
+            if (win === 0) {
+              noWinCount++;
+            } else {
+                // 1. 先标记每个球是否投注，并保留原始颜色
+                const annotated = combo.map(color => ({
+                    color: this.bets[color] > 0 ? color : 'unknown',
+                    original: color
+                }));
+
+                // 2. 分离 unknown 和已投注球
+                const unknowns = annotated.filter(item => item.color === 'unknown');
+                const betOn = annotated.filter(item => item.color !== 'unknown');
+
+                // 3. 对已投注的球：按本 combo 中该颜色出现频次降序排序
+                if (betOn.length > 0) {
+                    // 统计本 combo 中各颜色（原始）的频次
+                    const freq = {};
+                    combo.forEach(c => {
+                        freq[c] = (freq[c] || 0) + 1;
+                    });
+
+                    // 排序：高频在前；频次相同则保持原始顺序（稳定）
+                    betOn.sort((a, b) => freq[b.original] - freq[a.original]);
+                }
+
+                // 4. 合并：排序后的投注球 + unknown
+                const displayBalls = [
+                    ...betOn.map(item => item.color),
+                    ...unknowns.map(item => item.color)
+                ];
+
+
+              const key = JSON.stringify(displayBalls);
+
+              if (!map.has(key)) {
+                map.set(key, {
+                  count: 0,
+                  win: win,
+                  displayBalls: displayBalls,
+                  prob: 0
+                });
+              }
+              map.get(key).count++;
+            }
+          }
+
+          const results = Array.from(map.values()).map(item => ({
+            ...item,
+            prob: item.count / 816,
+            isNoWin: false
+          })).sort((a, b) => b.win - a.win);
+
+          if (noWinCount > 0) {
+            results.push({
+              count: noWinCount,
+              prob: noWinCount / 816,
+              win: 0,
+              displayBalls: ['unknown', 'unknown', 'unknown'],
+              isNoWin: true
+            });
+          }
+
+          this.summaryResults = results;
+          this.showSimulation = true;
+        },
+        async spin() {
+          this.isSpinning = true;
+          const randomIndex = Math.floor(Math.random() * this.allCombinations.length);
+          this.resultBalls = [...this.allCombinations[randomIndex]];
+
+          this.resultBalls.forEach(color => {
+            this.historyCount[color]++;
+          });
+
+          this.removeBallsFromMachine(this.resultBalls);
+
+          this.outputBalls = [];
+          for (let i = 0; i < 3; i++) {
+            await this.sleep(500);
+            this.outputBalls.push(this.resultBalls[i]);
+            }
+          let totalBet = this.totalBet;
+          let totalWin = 0;
+          const count = {};
+          this.colors.forEach(c => count[c] = 0);
+          this.resultBalls.forEach(c => count[c]++);
+          for (const color of this.colors) {
+            if (this.bets[color] > 0) {
+              const n = count[color];
+              let mult = 0;
+              if (n === 1) mult = 2;
+              else if (n === 2) mult = 3;
+              else if (n === 3) mult = 10;
+              totalWin += this.bets[color] * mult;
+            }
+          }
+            this.win = totalWin;
+            this.updateGlobalTotals(totalBet,totalWin);
+          this.hasResult = true;
+          this.isSpinning = false;
+        },
+          removeBallsFromMachine(drawnBalls) {
+              // === 第一步：原样执行移除逻辑 ===
+              const drawnMap = {};
+              drawnBalls.forEach(c => {
+                  drawnMap[c] = (drawnMap[c] || 0) + 1;
+              });
+
+              const newBalls = [];
+              const toRemove = { ...drawnMap };
+
+              for (const ball of this.machineBalls) {
+                  if (toRemove[ball.color] > 0) {
+                      toRemove[ball.color]--;
+                  } else {
+                      newBalls.push(ball);
+                  }
+              }
+
+              // === 第二步：对剩下的球重新布局（底部堆积 + 无重叠）===
+              this.repackBallsInMachine(newBalls);
+          },
+
+          // 新增：将一组球重新排布到容器底部（无重叠）
+          repackBallsInMachine(balls) {
+              const radius = 20; // 必须和 CSS 中 .ball-inside 的半径一致
+              const diameter = radius * 2;
+              const containerWidth = 200;  // 必须和 .gacha-machine 的 width 一致
+              const containerHeight = 160; // 必须和 .gacha-machine 的 height 一致
+
+              const placed = [];
+
+              for (const ball of balls) {
+                  let x, y;
+                  let placedSuccessfully = false;
+                  let attempts = 0;
+                  const maxAttempts = 500;
+
+                  while (!placedSuccessfully && attempts < maxAttempts) {
+                      attempts++;
+
+                      // 随机 x（保证不越界）
+                      x = radius + Math.random() * (containerWidth - diameter);
+
+                      // 初始 y：贴底
+                      y = containerHeight - radius;
+
+                      // 检查是否与已放置的球冲突
+                      let conflict = false;
+                      for (const p of placed) {
+                          const dx = x - p.x;
+                          const dy = y - p.y;
+                          const dist = Math.sqrt(dx * dx + dy * dy);
+                          if (dist < diameter - 1e-5) {
+                              conflict = true;
+                              break;
+                          }
+                      }
+
+                      if (!conflict) {
+                          placed.push({ x, y, color: ball.color });
+                          placedSuccessfully = true;
+                      }
+                      // 如果冲突，下一次循环会尝试新的 x
+                  }
+
+                  // 如果实在放不下，也加入（避免丢失球）
+                  if (!placedSuccessfully && balls.length > 0) {
+                      // 降级：放在底部随机位置（可能轻微重叠，但保底）
+                      x = radius + Math.random() * (containerWidth - diameter);
+                      y = containerHeight - radius;
+                      placed.push({ x, y, color: ball.color });
+                  }
+              }
+
+              this.machineBalls = placed;
+          },
+        refillMachine() {
+          const allBalls = [];
+          this.colors.forEach(color => {
+            for (let i = 0; i < 3; i++) {
+              allBalls.push({ color });
+            }
+          });
+          this.machineBalls = allBalls.map(ball => ({
+            color: ball.color,
+            x: 20 + Math.random() * (this.$el.querySelector('.gacha-machine').offsetWidth - 60),
+            y: 30 + Math.random() * 100
+          }));
+        },
+          async handleAction() {
+              this.simulateMessage = ''; // 👈 新增
+          if (this.hasResult) {
+            this.lastBets = { ...this.bets };
+            this.credit += this.win;
+            this.resultBalls = [];
+            this.outputBalls = [];
+            this.win = 0;
+            this.hasResult = false;
+            this.bets = { gray:0, green:0, blue:0, purple:0, yellow:0, orange:0 };
+            this.refillMachine();
+          } else {
+            if (Object.values(this.lastBets).some(v => v > 0)) {
+              const totalLast = Object.values(this.lastBets).reduce((a,b)=>a+b,0);
+              if (this.credit >= totalLast) {
+                this.bets = { ...this.lastBets };
+                this.credit -= totalLast;
+                this.updateSummary();
+              } else {
+                alert('分数不足，无法使用上局押注');
+                return;
+              }
+            }
+            await this.spin();
+          }
+        },
+        async autoLoop() {
+          if (!this.isAutoMode) return;
+          if (this.credit <= 0) {
+            this.stopAutoMode();
+            return;
+          }
+
+          try {
+            if (this.totalBet === 0 && Object.values(this.lastBets).some(v => v > 0)) {
+              const totalLast = Object.values(this.lastBets).reduce((a,b)=>a+b,0);
+              if (this.credit >= totalLast) {
+                this.bets = { ...this.lastBets };
+                this.credit -= totalLast;
+                this.updateSummary();
+              } else {
+                this.stopAutoMode();
+                return;
+              }
+            }
+
+            if (this.totalBet === 0) {
+              this.stopAutoMode();
+              return;
+            }
+
+            await this.spin();
+            await this.sleep(1600);
+
+            this.lastBets = { ...this.bets };
+            this.credit += this.win;
+            this.win = 0;
+            this.hasResult = false;
+            this.bets = { gray:0, green:0, blue:0, purple:0, yellow:0, orange:0 };
+            this.resultBalls = [];
+            this.outputBalls = [];
+            this.refillMachine();
+
+            this.autoTimeout = setTimeout(() => this.autoLoop(), 500);
+          } catch (e) {
+            this.stopAutoMode();
+          }
+        },
+        startAutoMode() {
+          if (this.totalBet === 0 && Object.values(this.lastBets).every(v => v === 0)) {
+            alert('请先押注或已有上局记录');
+            return;
+          }
+          this.isAutoMode = true;
+          this.autoLoop();
+        },
+        stopAutoMode() {
+          this.isAutoMode = false;
+          if (this.autoTimeout) {
+            clearTimeout(this.autoTimeout);
+            this.autoTimeout = null;
+          }
+        },
+          // 判断该颜色是否中奖（有 1/2/3 个球）
+          isWinningColor(color) {
+              if (!this.hasResult) return false;
+              const count = this.resultBalls.filter(c => c === color).length;
+              return count >= 1; // 只要有 ≥1 个就算中奖
+          },
+
+          // 返回倍数文本（仅用于显示）
+          multiplierText(color) {
+              if (!this.hasResult) return '';
+              const count = this.resultBalls.filter(c => c === color).length;
+              if (count === 1) return '2x';
+              if (count === 2) return '3x';
+              if (count === 3) return '10x';
+              return ''; // 未中奖 → 空字符串
+          },
+        // ✅ 倍数样式类
+        multiplierClass(color) {
+          const text = this.multiplierText(color);
+          if (text === '0x') return 'multiplier-miss';
+          return 'multiplier-hit';
+        },
+        // ✅ 模拟运行（带结果反馈）
+          async runSimulation() {
+              if (this.simulateCount <= 0) return;
+
+              const maxRuns = Math.min(this.simulateCount, 100000);
+              let runsCompleted = 0;
+              const hasBets = this.totalBet > 0;
+
+              // 🔥 关键修复：反推用户看到的“初始牌面”
+              // 假设：当前 this.credit 是“押注后余额”，所以初始 = credit + totalBet
+              // 但如果没押注，就不加
+              const logicalInitialCredit = hasBets ? Number(this.credit) + this.totalBet : Number(this.credit);
+
+              // 检查是否足够至少一局
+              if (hasBets && logicalInitialCredit < this.totalBet) {
+                  this.simulateMessage = '分数不足，无法开始带押注的模拟';
+                  this.simulationResult = null;
+                  return;
+              }
+
+              const TARGET_DURATION = 5000;
+              const UPDATE_INTERVAL = 200;
+              const estimatedUpdates = Math.max(1, Math.floor(TARGET_DURATION / UPDATE_INTERVAL));
+              const batchSize = Math.max(100, Math.ceil(maxRuns / estimatedUpdates));
+
+              // 沙盒变量：从逻辑初始值开始
+              let credit = logicalInitialCredit;
+              let totalBetAmount = 0;
+              let totalWin = 0;
+
+              const simulateBatch = (start, end) => {
+                  for (let i = start; i < end; i++) {
+                      if (hasBets && credit < this.totalBet) {
+                          runsCompleted = i;
+                          return false;
+                      }
+
+                      const combo = this.allCombinations[Math.floor(Math.random() * 816)];
+                      combo.forEach(color => {
+                          this.historyCount[color]++;
+                      });
+
+                      if (hasBets) {
+                          const count = {};
+                          this.colors.forEach(c => count[c] = 0);
+                          combo.forEach(c => count[c]++);
+
+                          let win = 0;
+                          for (const color of this.colors) {
+                              const bet = this.bets[color];
+                              if (bet > 0) {
+                                  const n = count[color];
+                                  if (n === 1) win += bet * 2;
+                                  else if (n === 2) win += bet * 3;
+                                  else if (n === 3) win += bet * 10;
+                              }
+                          }
+
+                          totalBetAmount += this.totalBet;
+                          totalWin += win;
+                          credit = credit - this.totalBet + win;
+                          this.updateGlobalTotals(this.totalBet, win);
+                      }
+                  }
+                  runsCompleted = end;
+                  return true;
+              };
+
+              return new Promise((resolve) => {
+                  const startTime = Date.now();
+                  const runNextBatch = () => {
+                      const start = runsCompleted;
+                      const end = Math.min(start + batchSize, maxRuns);
+
+                      if (start >= maxRuns || !simulateBatch(start, end)) {
+                          // 注意：这里 simulateBatch 可能已经执行过，所以合并逻辑
+                          // 但我们已在循环内处理，此处只需 final update
+                          this.credit = credit; // 可选：同步回 UI
+                          
+                          if (hasBets) {
+                              const netProfit = totalWin - totalBetAmount; // ✅ 流水净利润
+
+                              this.simulationResult = {
+                                  status: start >= maxRuns ? 'completed' : 'stopped',
+                                  runs: runsCompleted,
+                                  totalBetAmount,
+                                  totalWin,
+                                  netProfit,
+                              };
+                          } else {
+                              this.simulationResult = { status: 'color-only', runs: runsCompleted };
+                          }
+                          this.simulateMessage = '';
+                          resolve();
+                          return;
+                      }
+
+                      // 进度更新
+                      this.credit = credit;
+                      const elapsed = Date.now() - startTime;
+                      const progress = runsCompleted / maxRuns;
+                      const expectedElapsed = TARGET_DURATION * progress;
+                      const delay = Math.max(0, UPDATE_INTERVAL - (elapsed - expectedElapsed));
+                      this.simulateMessage = `正在模拟... (${runsCompleted}/${maxRuns})`;
+
+                      setTimeout(runNextBatch, delay);
+                  };
+
+                  runNextBatch();
+              });
+            },
+          //倍投法
+            async runMartingaleSimulation() {
+                const multiplier = 2;
+                const hasBets = this.totalBet > 0;
+
+                if (!hasBets) {
+                    this.martingaleResult = { error: '请先设置押注' };
+                    return;
+                }
+
+                let allInCount = 0;
+
+                // 初始化模拟用信用（不修改真实 this.credit 直到模拟结束？但你要求更新，所以直接操作）
+                // 注意：如果你希望模拟不影响真实数据，请先备份。此处按你要求“更新分数”
+                let credit = Number(this.credit);
+                const initialBet = this.totalBet;
+                let currentBet = initialBet;
+                let globalRound = 0;
+
+                // 重置累计统计（或累加？按你已有逻辑，这里假设每次模拟重置）
+                // 如果你要累加历史，请移除这两行
+                this.totalBetAmount = 0;
+                this.totalWinAmount = 0;
+
+                const completedCycles = [];
+                let currentCycleRounds = [];
+
+                let maxCredit = credit;
+                let peakCycleIndex = -1;
+
+                while (true) {
+                    // 💡 关键修改 1：资金不足时 All-in
+                    if (credit <= 0) break;
+
+                    if (credit <= currentBet) {
+                        // 全押剩余
+                        currentBet = credit;
+                        allInCount++; // ✅ 计数 +1
+                    }
+
+                    globalRound++;
+
+                    // 开奖
+                    const combo = this.allCombinations[Math.floor(Math.random() * 816)];
+
+                    // ✅ 更新颜色统计
+                    combo.forEach(color => {
+                        this.historyCount[color] = (this.historyCount[color] || 0) + 1;
+                    });
+
+                    // 计算中奖
+                    let win = 0;
+                    if (this.totalBet > 0) {
+                        const count = {};
+                        this.colors.forEach(c => count[c] = 0);
+                        combo.forEach(c => count[c]++);
+
+                        for (const color of this.colors) {
+                            const ratio = this.bets[color] / this.totalBet;
+                            const actualBet = ratio * currentBet;
+                            const n = count[color];
+                            let mult = 0;
+                            if (n === 1) mult = 2;
+                            else if (n === 2) mult = 3;
+                            else if (n === 3) mult = 10;
+                            win += actualBet * mult;
+                        }
+                    }
+
+                    // ✅ 更新全局累计
+                    this.totalBetAmount += currentBet;
+                    this.totalWinAmount += win;
+
+                    const creditBefore = credit;
+                    credit = credit - currentBet + win;
+
+                    // ✅ 实时更新 this.credit（按你要求）
+                    this.credit = credit;
+
+                    // 更新峰值
+                    if (credit > maxCredit) {
+                        maxCredit = credit;
+                        // 暂不设 peakCycleIndex，等周期结束再判断
+                    }
+
+                    currentCycleRounds.push({
+                        round: globalRound,
+                        bet: currentBet,
+                        win,
+                        creditAfter: credit
+                    });
+
+                    // 判断本局是否盈利（用于结束周期）
+                    const isProfitable = win >= currentBet;
+
+                    if (isProfitable) {
+                        // 周期成功结束
+                        const totalBet = currentCycleRounds.reduce((s, r) => s + r.bet, 0);
+                        const totalWin = win; // 只最后一把有收益
+                        const netProfit = totalWin - totalBet;
+
+                        const cycleEndCredit = credit;
+                        completedCycles.push({
+                            totalBet,
+                            totalWin,
+                            netProfit,
+                            creditAfter: cycleEndCredit,
+                            endedAtRound: globalRound
+                        });
+
+                        // 检查峰值是否在此周期
+                        if (cycleEndCredit >= maxCredit) {
+                            maxCredit = cycleEndCredit;
+                            peakCycleIndex = completedCycles.length - 1;
+                        }
+
+                        // 重置下一轮
+                        currentCycleRounds = [];
+                        currentBet = initialBet;
+                    } else {
+                        // 继续倍投
+                        currentBet *= multiplier;
+                    }
+
+                    // 如果余额为 0，强制退出
+                    if (credit <= 0) break;
+                }
+
+                // 构造未完成周期（如果存在）
+                let incompleteCycle = null;
+                const failedChain = [...currentCycleRounds]; // 保留原始链
+
+                if (failedChain.length > 0) {
+                    const totalBet = failedChain.reduce((s, r) => s + r.bet, 0);
+                    const totalWin = failedChain.reduce((s, r) => s + r.win, 0);
+                    const netProfit = totalWin - totalBet;
+                    const finalCredit = failedChain[failedChain.length - 1]?.creditAfter || 0;
+
+                    incompleteCycle = {
+                        totalBet,
+                        totalWin,
+                        netProfit,
+                        creditAfter: finalCredit,
+                        isIncomplete: true
+                    };
+
+                    // 检查失败链中是否有更高余额（罕见，但处理）
+                    const chainMax = Math.max(...failedChain.map(r => r.creditAfter));
+                    if (chainMax > maxCredit) {
+                        maxCredit = chainMax;
+                        peakCycleIndex = -2;
+                    }
+                }
+
+                // 汇总
+                const totalBetAmount = completedCycles.reduce((s, c) => s + c.totalBet, 0) + (incompleteCycle?.totalBet || 0);
+                const totalWin = completedCycles.reduce((s, c) => s + c.totalWin, 0) + (incompleteCycle?.totalWin || 0);
+                const netProfit = totalWin - totalBetAmount - this.totalBet;
+
+
+                this.martingaleResult = {
+                    completedCycles,
+                    incompleteCycle,
+                    failedChain, // 用于展开详情
+                    finalCredit: credit,
+                    maxCredit,
+                    peakCycleIndex,
+                    summary: { totalBetAmount, totalWin, netProfit },
+                    allInCount// ✅ 新增字段：孤注一掷次数
+                };
+            },
+          formatNumber(num) {
+              if (num === 0) return '0';
+
+              const isNegative = num < 0;
+              const absNum = Math.abs(num);
+
+              let result;
+              if (absNum >= 1000000) {
+                  result = (absNum / 1000000).toFixed(1) + 'M';
+              } else if (absNum >= 1000) {
+                  // 使用 toFixed(0) 或 Math.floor，根据需求
+                  result = Math.floor(absNum / 1000) + 'K';
+              } else {
+                  result = absNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+              }
+
+              return isNegative ? '-' + result : result;
+          },
+        formatExpectation(num) {
+          if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+          if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
+          return num.toFixed(2);
+        },
+        sleep(ms) {
+          return new Promise(resolve => setTimeout(resolve, ms));
+        }
+      },
+      mounted() {
+        this.allCombinations = generateAllCombinations(this.colors);
+        this.refillMachine();
+      }
+    });
+  </script>
+</body>
+</html>
