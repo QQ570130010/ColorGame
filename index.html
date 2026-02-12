@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8" />
@@ -1235,120 +1235,124 @@
           const text = this.multiplierText(color);
           if (text === '0x') return 'multiplier-miss';
           return 'multiplier-hit';
-        },
+            },
+            clearBetsAll() {
+                // 遍历所有颜色，将 bets 归零
+                this.colors.forEach(color => {
+                    this.$set(this.bets, color, 0);
+                });
+                // 总押注归零
+                this.totalBet = 0;
+            },
         // ✅ 模拟运行（带结果反馈）
-          async runSimulation() {
-              if (this.simulateCount <= 0) return;
+            async runSimulation() {
+                if (this.simulateCount <= 0) return;
 
-              const maxRuns = Math.min(this.simulateCount, 100000);
-              let runsCompleted = 0;
-              const hasBets = this.totalBet > 0;
+                const maxRuns = Math.min(this.simulateCount, 100000);
+                let runsCompleted = 0;
+                const hasBets = this.totalBet > 0;
 
-              // 🔥 关键修复：反推用户看到的“初始牌面”
-              // 假设：当前 this.credit 是“押注后余额”，所以初始 = credit + totalBet
-              // 但如果没押注，就不加
-              const logicalInitialCredit = hasBets ? Number(this.credit) + this.totalBet : Number(this.credit);
+                // 🔥 关键修复：反推用户看到的“初始牌面”
+                const logicalInitialCredit = hasBets ? Number(this.credit) + this.totalBet : Number(this.credit);
 
-              // 检查是否足够至少一局
-              if (hasBets && logicalInitialCredit < this.totalBet) {
-                  this.simulateMessage = '分数不足，无法开始带押注的模拟';
-                  this.simulationResult = null;
-                  return;
-              }
+                if (hasBets && logicalInitialCredit < this.totalBet) {
+                    this.simulateMessage = '分数不足，无法开始带押注的模拟';
+                    this.simulationResult = null;
+                    return;
+                }
 
-              const TARGET_DURATION = 5000;
-              const UPDATE_INTERVAL = 200;
-              const estimatedUpdates = Math.max(1, Math.floor(TARGET_DURATION / UPDATE_INTERVAL));
-              const batchSize = Math.max(100, Math.ceil(maxRuns / estimatedUpdates));
+                const TARGET_DURATION = 5000;
+                const UPDATE_INTERVAL = 200;
+                const estimatedUpdates = Math.max(1, Math.floor(TARGET_DURATION / UPDATE_INTERVAL));
+                const batchSize = Math.max(100, Math.ceil(maxRuns / estimatedUpdates));
 
-              // 沙盒变量：从逻辑初始值开始
-              let credit = logicalInitialCredit;
-              let totalBetAmount = 0;
-              let totalWin = 0;
+                let credit = logicalInitialCredit;
+                let totalBetAmount = 0;
+                let totalWin = 0;
 
-              const simulateBatch = (start, end) => {
-                  for (let i = start; i < end; i++) {
-                      if (hasBets && credit < this.totalBet) {
-                          runsCompleted = i;
-                          return false;
-                      }
+                const simulateBatch = (start, end) => {
+                    for (let i = start; i < end; i++) {
+                        if (hasBets && credit < this.totalBet) {
+                            runsCompleted = i;
+                            return false;
+                        }
 
-                      const combo = this.allCombinations[Math.floor(Math.random() * 816)];
-                      combo.forEach(color => {
-                          this.historyCount[color]++;
-                      });
+                        const combo = this.allCombinations[Math.floor(Math.random() * 816)];
+                        combo.forEach(color => {
+                            this.historyCount[color]++;
+                        });
 
-                      if (hasBets) {
-                          const count = {};
-                          this.colors.forEach(c => count[c] = 0);
-                          combo.forEach(c => count[c]++);
+                        if (hasBets) {
+                            const count = {};
+                            this.colors.forEach(c => count[c] = 0);
+                            combo.forEach(c => count[c]++);
 
-                          let win = 0;
-                          for (const color of this.colors) {
-                              const bet = this.bets[color];
-                              if (bet > 0) {
-                                  const n = count[color];
-                                  if (n === 1) win += bet * 2;
-                                  else if (n === 2) win += bet * 3;
-                                  else if (n === 3) win += bet * 10;
-                              }
-                          }
+                            let win = 0;
+                            for (const color of this.colors) {
+                                const bet = this.bets[color];
+                                if (bet > 0) {
+                                    const n = count[color];
+                                    if (n === 1) win += bet * 2;
+                                    else if (n === 2) win += bet * 3;
+                                    else if (n === 3) win += bet * 10;
+                                }
+                            }
 
-                          totalBetAmount += this.totalBet;
-                          totalWin += win;
-                          credit = credit - this.totalBet + win;
-                          this.updateGlobalTotals(this.totalBet, win);
-                      }
-                  }
-                  runsCompleted = end;
-                  return true;
-              };
+                            totalBetAmount += this.totalBet;
+                            totalWin += win;
+                            credit = credit - this.totalBet + win;
+                            this.updateGlobalTotals(this.totalBet, win);
+                        }
+                    }
+                    runsCompleted = end;
+                    return true;
+                };
 
-              return new Promise((resolve) => {
-                  const startTime = Date.now();
-                  const runNextBatch = () => {
-                      const start = runsCompleted;
-                      const end = Math.min(start + batchSize, maxRuns);
+                // 返回 Promise，并在 resolve 后自动清空押注
+                return new Promise((resolve) => {
+                    const startTime = Date.now();
+                    const runNextBatch = () => {
+                        const start = runsCompleted;
+                        const end = Math.min(start + batchSize, maxRuns);
 
-                      if (start >= maxRuns || !simulateBatch(start, end)) {
-                          // 注意：这里 simulateBatch 可能已经执行过，所以合并逻辑
-                          // 但我们已在循环内处理，此处只需 final update
-                          this.credit = credit; // 可选：同步回 UI
-                          
-                          if (hasBets) {
-                              const netProfit = totalWin - totalBetAmount; // ✅ 流水净利润
+                        if (start >= maxRuns || !simulateBatch(start, end)) {
+                            this.credit = credit;
 
-                              this.simulationResult = {
-                                  status: start >= maxRuns ? 'completed' : 'stopped',
-                                  runs: runsCompleted,
-                                  totalBetAmount,
-                                  totalWin,
-                                  netProfit,
-                              };
-                          } else {
-                              this.simulationResult = { status: 'color-only', runs: runsCompleted };
-                          }
-                          this.simulateMessage = '';
-                          resolve();
-                          return;
-                      }
+                            if (hasBets) {
+                                const netProfit = totalWin - totalBetAmount;
+                                this.simulationResult = {
+                                    status: start >= maxRuns ? 'completed' : 'stopped',
+                                    runs: runsCompleted,
+                                    totalBetAmount,
+                                    totalWin,
+                                    netProfit,
+                                };
+                            } else {
+                                this.simulationResult = { status: 'color-only', runs: runsCompleted };
+                            }
+                            this.simulateMessage = '';
+                            resolve(); // 👈 模拟完成
+                            return;
+                        }
 
-                      // 进度更新
-                      this.credit = credit;
-                      const elapsed = Date.now() - startTime;
-                      const progress = runsCompleted / maxRuns;
-                      const expectedElapsed = TARGET_DURATION * progress;
-                      const delay = Math.max(0, UPDATE_INTERVAL - (elapsed - expectedElapsed));
-                      this.simulateMessage = `正在模拟... (${runsCompleted}/${maxRuns})`;
+                        this.credit = credit;
+                        const elapsed = Date.now() - startTime;
+                        const progress = runsCompleted / maxRuns;
+                        const expectedElapsed = TARGET_DURATION * progress;
+                        const delay = Math.max(0, UPDATE_INTERVAL - (elapsed - expectedElapsed));
+                        this.simulateMessage = `正在模拟... (${runsCompleted}/${maxRuns})`;
 
-                      setTimeout(runNextBatch, delay);
-                  };
+                        setTimeout(runNextBatch, delay);
+                    };
 
-                  runNextBatch();
-              });
+                    runNextBatch();
+                }).then(() => {
+                    // ✅ 所有模拟完成后，清空押注
+                    this.clearBetsAll();
+                });
             },
           //倍投法
-            async runMartingaleSimulation() {
+          async runMartingaleSimulation() {
                 const multiplier = 2;
                 const hasBets = this.totalBet > 0;
 
@@ -1517,6 +1521,7 @@
                     summary: { totalBetAmount, totalWin, netProfit },
                     allInCount// ✅ 新增字段：孤注一掷次数
                 };
+              this.clearBetsAll();
             },
           formatNumber(num) {
               if (num === 0) return '0';
